@@ -1,0 +1,2 @@
+Dentro del codigo de sensor_emitter.py se encuantra una linea para pegar el token generado. Este tipo de acceso se genera a traves del swagger. En nuestro endpoint TOKEN generamos el token que vamos a usar para conectar con el script. 
+Notemos que al ejecutar el archivo este lanza resultados y enviando lecturas de forma aleatorio (random) y esto de una forma iteractiva se emula en la app mobile cambiando el color de la estacion que estamos analizando
