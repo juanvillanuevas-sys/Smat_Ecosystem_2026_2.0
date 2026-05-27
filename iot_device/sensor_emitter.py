@@ -4,8 +4,8 @@ import random
 
 # CONFIGURACIÓN
 API_URL = "http://127.0.0.1:8000/lecturas/"
-ESTACION_ID = 3 # ID de la estación registrada en la DB
-TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzc5OTAwNzEwfQ.MYMOHRASMDipt5H_GCbJ647TvpuHoi5yPMxUr0xybQA" # Reemplaza por el access_token largo de Swagger
+ESTACION_ID = 1 # ID de la estación registrada en la DB
+TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzc5OTAzMjMxfQ.Jc_Gu9RXTCktZkA2EdwlLWcb1gbcJhoUkQZk_axp4hI" # Reemplaza por el access_token largo de Swagger
 
 def leer_sensor_emulado():
     # Simulamos una lectura de nivel de río (0 a 100 cm)
