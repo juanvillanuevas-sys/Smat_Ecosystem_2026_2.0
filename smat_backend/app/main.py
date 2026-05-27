@@ -73,6 +73,22 @@ def crear_estacion(
 ):
     return crud.crear_estacion(db=db, estacion=estacion)
 
+
+@app.get(
+    "/estaciones/",
+    status_code=200,
+    tags=["Gestión de Infraestructura"],
+    summary="Listar todas las estaciones de monitoreo",
+    description="Recupera todas las estaciones registradas en la base de datos.",
+    responses={401: {"description": "Token inválido o ausente"}}
+)
+def obtener_estaciones(
+    db: Session = Depends(get_db),
+    usuario: str = Depends(obtener_identidad_actual)  # PROTECCIÓN JWT igual que el POST
+):
+    # Consultamos todas las estaciones de la base de datos
+    estaciones = db.query(models.EstacionDB).all()
+    return estaciones
 # ── Telemetría de Sensores ───────────────────────
 
 @app.post(

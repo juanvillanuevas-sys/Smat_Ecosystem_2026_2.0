@@ -5,13 +5,19 @@ import 'auth_service.dart';
 
 class ApiService {
   final String baseUrl = "http://127.0.0.1:8000";
-
-  // ── GET estaciones ────────────────────────────
+// ── GET estaciones ────────────────────────────
   Future<List<Estacion>> fetchEstaciones() async {
     try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/estaciones/'))
-          .timeout(const Duration(seconds: 5));
+      final token = await AuthService().getToken();
+
+      // Dejamos la barra al final tal como lo pide tu backend
+      final response = await http.get(
+        Uri.parse('$baseUrl/estaciones/'), 
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         List jsonResponse = json.decode(response.body);
@@ -20,7 +26,7 @@ class ApiService {
         throw Exception('Error del servidor: ${response.statusCode}');
       }
     } catch (e) {
-      throw Exception('No se pudo conectar con SMAT. ¿Está el servidor activo?');
+      throw Exception('No se pudo conectar con SMAT.');
     }
   }
 

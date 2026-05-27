@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../models/estacion.dart';
 import 'login_screen.dart';
 import 'add_estacion_screen.dart';
+import 'dart:async'; // 1. Mantenemos el import del Timer
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,18 +18,38 @@ class _HomePageState extends State<HomePage> {
   List<Estacion> _estaciones = [];
   bool _isLoading = true;
   String? _error;
+  
+  // ── Variable para controlar el Timer del Reto ──────────────────
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
-    _cargarEstaciones();
+    // Primera carga tradicional con pantalla de carga activa
+    _cargarEstaciones(mostrarLoading: true);
+
+    // ── RETO SEMANA 9: Consulta automática en segundo plano ────
+    // Consulta al backend cada 3 segundos de manera autónoma
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _cargarEstaciones(mostrarLoading: false);
+    });
   }
 
-  Future<void> _cargarEstaciones() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    // IMPORTANTE: Cancelamos el Timer al salir para evitar fugas de memoria
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  // Modificamos la función para aceptar recargas silenciosas
+  Future<void> _cargarEstaciones({bool mostrarLoading = false}) async {
+    if (mostrarLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
     try {
       final lista = await apiService.fetchEstaciones();
 
@@ -40,15 +61,23 @@ class _HomePageState extends State<HomePage> {
         }),
       );
 
+      // Verificamos si el componente sigue montado antes de hacer el setState
+      if (!mounted) return;
+
       setState(() {
         _estaciones = conRiesgo;
         _isLoading = false;
+        _error = null; // Limpia errores si se restablece la conexión
       });
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      // Solo mostramos error si es la carga inicial o si realmente se cayó la red por completo
+      if (mostrarLoading || _estaciones.isEmpty) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -102,7 +131,7 @@ class _HomePageState extends State<HomePage> {
               );
               if (ok) {
                 Navigator.pop(context);
-                _cargarEstaciones();
+                _cargarEstaciones(mostrarLoading: true);
               }
             },
             child: const Text('Guardar'),
@@ -113,7 +142,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleLogout() async {
+    _refreshTimer?.cancel(); // Cancelamos antes de irnos al Login
     await AuthService().logout();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -143,7 +174,7 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(builder: (context) => AddEstacionScreen()),
           );
-          if (result == true) _cargarEstaciones();
+          if (result == true) _cargarEstaciones(mostrarLoading: true);
         },
         backgroundColor: Colors.teal,
         tooltip: 'Nueva estación',
@@ -157,7 +188,7 @@ class _HomePageState extends State<HomePage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null) {
+    if (_error != null && _estaciones.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -175,7 +206,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _cargarEstaciones,
+              onPressed: () => _cargarEstaciones(mostrarLoading: true),
               icon: const Icon(Icons.refresh),
               label: const Text('Reintentar'),
             ),
@@ -188,9 +219,9 @@ class _HomePageState extends State<HomePage> {
       return const Center(child: Text('No hay estaciones registradas.'));
     }
 
-    // Pull-to-Refresh
+    // Pull-to-Refresh por si el usuario quiere forzarlo manualmente
     return RefreshIndicator(
-      onRefresh: _cargarEstaciones,
+      onRefresh: () => _cargarEstaciones(mostrarLoading: false),
       child: ListView.builder(
         itemCount: _estaciones.length,
         itemBuilder: (context, index) {
@@ -210,18 +241,18 @@ class _HomePageState extends State<HomePage> {
             onDismissed: (direction) async {
               bool ok = await apiService.eliminarEstacion(est.id);
               if (ok) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${est.nombre} eliminada')),
                 );
-                _cargarEstaciones();
+                _cargarEstaciones(mostrarLoading: false);
               }
             },
             child: Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: ListTile(
-                // Color de alerta temprana
                 leading: CircleAvatar(
-                  backgroundColor: colorAlerta,
+                  backgroundColor: colorAlerta, // <── ¡Cambia sola aquí!
                   child: const Icon(Icons.satellite_alt, color: Colors.white),
                 ),
                 title: Text(
