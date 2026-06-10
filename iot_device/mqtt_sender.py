@@ -12,7 +12,7 @@ client.connect(BROKER, PORT)
 
 while True:
     payload = {
-        "valor": round(random.uniform(20.0, 60.0), 2),
+        "valor": round(random.uniform(44.0, 46.0), 2),
         "timestamp": time.time()
     }
 
