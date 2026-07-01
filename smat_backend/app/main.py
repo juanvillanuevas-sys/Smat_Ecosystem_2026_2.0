@@ -2,10 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional
-from smat_backend.app import crud
-from smat_backend.app.database import engine, get_db
-from smat_backend.app.auth import crear_token_acceso, obtener_identidad_actual
-from smat_backend.app import models, schemas
+from . import crud
+from .database import engine, get_db
+from .auth import crear_token_acceso, obtener_identidad_actual
+from . import models, schemas
 
 models.Base.metadata.create_all(bind=engine)
 

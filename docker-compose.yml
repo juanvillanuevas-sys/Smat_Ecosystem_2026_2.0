@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Servicio 1: El Servidor API
+  backend:
+    build: ./smat_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - smat_sqlite_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/smat.db
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs').getcode()"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Servicio 2: El traductor de protocolos IoT
+  mqtt_bridge:
+    build: ./iot_device
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - API_URL=http://backend:8000/lecturas/
+      - JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzgyOTI2ODg0fQ.XBxX2Q10sIxdGPpske3vp_jlNCgL4Zw9ALnckiAC9JY"
+
+volumes:
+  smat_sqlite_data: 
+
+
+       

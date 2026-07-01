@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from smat_backend.app import schemas
-from smat_backend.app import models
+from . import schemas
+from . import models
 
 def crear_estacion(db: Session, estacion: schemas.EstacionCreate):
     nueva = models.EstacionDB(

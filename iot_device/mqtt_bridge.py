@@ -3,16 +3,17 @@ import requests
 import json
 import sys
 import time
+import os
 
 # CONFIGURACIÓN DEL ENTORNO SMAT
 MQTT_BROKER = "broker.hivemq.com"
 MQTT_PORT = 1883
-MQTT_TOPIC = "fisi/smat/estaciones/+/lecturas"  # El '+' es un wildcard para el ID de la estación
+MQTT_TOPIC = "fisi/smat/estaciones/+"  # El '+' es un wildcard para el ID de la estación
 
-API_URL = "http://localhost:8000/lecturas/"
+API_URL = os.environ.get("API_URL", "http://backend:8000/lecturas/")
 
 # Token JWT generado previamente desde Swagger o la App móvil para el usuario administrador
-JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzgxMTA4ODU0fQ.kMq-b8U3_H1p5LaZoeKLMnoULRCAnXzGfuJJvhNS9Qg"
+JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzgyOTI2ODg0fQ.XBxX2Q10sIxdGPpske3vp_jlNCgL4Zw9ALnckiAC9JY"
 cache_estaciones = {} #Ultimo valor persistido
 #Configuracion el filtro
 UMBRAL_CAMBIO = 0.05
@@ -106,7 +107,8 @@ def on_message(client, userdata, msg):
         response = requests.post(
             API_URL,
             json=api_payload,
-            headers=headers
+            headers=headers,
+            allow_redirects=False
         )
 
         if response.status_code in [200, 201]:
