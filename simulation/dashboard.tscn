@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://dmq3gx015p7n3"]
+
+[ext_resource type="Script" path="res://dashboard.gd" id="1_cl7pf"]
+[ext_resource type="Texture2D" uid="uid://dax0dgl4qqkqb" path="res://nn6x_2afw_201214.jpg" id="1_k4cmt"]
+
+[node name="Dashboard" type="Node2D"]
+script = ExtResource("1_cl7pf")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(574.938, 323.125)
+scale = Vector2(0.274035, 0.123111)
+texture = ExtResource("1_k4cmt")

@@ -1,12 +1,6 @@
 FROM python:3.11-slim
-
 WORKDIR /app
- 
-# Instalar las librerías directamente ya que son pocas
-RUN pip install --no-cache-dir paho-mqtt requests
-
-# Copiar el script del puente
-COPY mqtt_bridge.py .
-
-# Ejecutar el daemon
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
 CMD ["python", "mqtt_bridge.py"]

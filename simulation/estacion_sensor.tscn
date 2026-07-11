@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://bs7j3m5xd83fc"]
+
+[ext_resource type="Texture2D" uid="uid://bqbkteqdfepfj" path="res://satellite-antenna-isolated-cartoon-illustration-in-flat-style-vector.jpg" id="1_x2q8e"]
+[ext_resource type="Script" path="res://sprite_2d.gd" id="2_e70w5"]
+
+[node name="EstacionSensor" type="Node2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(599.845, 302.655)
+scale = Vector2(0.31397, 0.306827)
+texture = ExtResource("1_x2q8e")
+script = ExtResource("2_e70w5")
+
+[node name="Label" type="Label" parent="Sprite2D"]
+offset_left = -477.0
+offset_top = 513.0
+offset_right = 494.0
+offset_bottom = 601.0

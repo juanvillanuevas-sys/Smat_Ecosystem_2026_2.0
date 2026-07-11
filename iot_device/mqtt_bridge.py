@@ -1,104 +1,70 @@
+import json
 import paho.mqtt.client as mqtt
 import requests
-import json
-import sys
 import time
 import os
+import sys
 
-# CONFIGURACIÓN DEL ENTORNO SMAT
+# CONFIGURACIÓN
 MQTT_BROKER = "broker.hivemq.com"
 MQTT_PORT = 1883
-MQTT_TOPIC = "fisi/smat/estaciones/+"  # El '+' es un wildcard para el ID de la estación
+MQTT_TOPIC = "fisi/smat/estaciones/+"  # Escucha todas las estaciones
 
-API_URL = os.environ.get("API_URL", "http://backend:8000/lecturas/")
+API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000/lecturas/")
+JWT_TOKEN = os.environ.get("JWT_TOKEN", "")  # ← Pon tu token aquí o en variable de entorno
 
-# Token JWT generado previamente desde Swagger o la App móvil para el usuario administrador
-JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbl9zbWF0IiwiZXhwIjoxNzgyOTI2ODg0fQ.XBxX2Q10sIxdGPpske3vp_jlNCgL4Zw9ALnckiAC9JY"
-cache_estaciones = {} #Ultimo valor persistido
-#Configuracion el filtro
+cache_estaciones = {}
 UMBRAL_CAMBIO = 0.05
 TIEMPO_VIDA = 60
+
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
         print("🟢 Conectado exitosamente al Broker MQTT")
-
-        # Suscribirse al tópico global de lecturas de estaciones
         client.subscribe(MQTT_TOPIC)
-
-        print(f"📡 Escuchando transmisiones en el tópico: {MQTT_TOPIC}")
+        print(f"📡 Escuchando en: {MQTT_TOPIC}")
     else:
-        print(f"🔴 Error de conexión al Broker. Código de retorno: {rc}")
+        print(f"🔴 Error de conexión. Código: {rc}")
         sys.exit(1)
+
 
 def on_message(client, userdata, msg):
     try:
-        # 1. Decodificar el payload binario de MQTT a JSON string
         payload_raw = msg.payload.decode("utf-8")
         data_json = json.loads(payload_raw)
 
-        # 2. Extraer ID de estación
         topic_parts = msg.topic.split('/')
         estacion_id = int(topic_parts[3])
-
         valor_actual = float(data_json["valor"])
 
-        print(
-            f"📩 Telemetría recibida de Estación "
-            f"[{estacion_id}]: {valor_actual}"
-        )
+        print(f"📩 Telemetría recibida de Estación [{estacion_id}]: {valor_actual}")
 
         tiempo_actual = time.time()
+        debe_guardarse = False
 
-        # Primera lectura de la estación
         if estacion_id not in cache_estaciones:
-            print(
-                f"🆕 Primera lectura de estación "
-                f"{estacion_id}. Se almacenará."
-            )
+            print(f"🆕 Primera lectura de estación {estacion_id}. Se almacenará.")
             debe_guardarse = True
         else:
             ultimo_valor = cache_estaciones[estacion_id]["valor"]
             ultimo_tiempo = cache_estaciones[estacion_id]["timestamp"]
-
             diferencia = abs(valor_actual - ultimo_valor)
-            if ultimo_valor != 0:
-                porcentaje_cambio = diferencia / abs(ultimo_valor)
-            else:
-                porcentaje_cambio = 1
+            porcentaje_cambio = diferencia / abs(ultimo_valor) if ultimo_valor != 0 else 1
             tiempo_transcurrido = tiempo_actual - ultimo_tiempo
-            # Regla 1: Cambio mayor al 5%
-            if porcentaje_cambio > UMBRAL_CAMBIO:
-                print(
-                    f"📈 Cambio significativo detectado "
-                    f"({porcentaje_cambio*100:.2f}%)."
-                )
-                debe_guardarse = True
-            # Regla 2: Reporte mínimo de vida cada 60 segundos
-            elif tiempo_transcurrido > TIEMPO_VIDA:
-                print(
-                    f"⏱️ Reporte de vida "
-                    f"({int(tiempo_transcurrido)} s)."
-                )
-                debe_guardarse = True
 
+            if porcentaje_cambio > UMBRAL_CAMBIO:
+                print(f"📈 Cambio significativo ({porcentaje_cambio*100:.2f}%).")
+                debe_guardarse = True
+            elif tiempo_transcurrido > TIEMPO_VIDA:
+                print(f"⏱️ Reporte de vida ({int(tiempo_transcurrido)}s).")
+                debe_guardarse = True
             else:
-                print(
-                    f"🚫 Lectura filtrada. "
-                    f"Cambio={porcentaje_cambio*100:.2f}%"
-                )
-                debe_guardarse = False
+                print(f"🚫 Lectura filtrada. Cambio={porcentaje_cambio*100:.2f}%")
 
         if not debe_guardarse:
             return
 
-        # 3. Payload para FastAPI
-        api_payload = {
-            "valor": valor_actual,
-            "estacion_id": estacion_id
-        }
-
-        # 4. Headers HTTP
+        api_payload = {"valor": valor_actual, "estacion_id": estacion_id}
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {JWT_TOKEN}"
@@ -112,43 +78,29 @@ def on_message(client, userdata, msg):
         )
 
         if response.status_code in [200, 201]:
-
-            print(
-                f"💾 [DB Sincronizada] "
-                f"Lectura de {valor_actual} guardada."
-            )
-
+            print(f"💾 Lectura {valor_actual} guardada en DB.")
             cache_estaciones[estacion_id] = {
                 "valor": valor_actual,
                 "timestamp": tiempo_actual
             }
-
         else:
-
-            print(
-                f"⚠️ [Fallo de Ingesta] "
-                f"Código: {response.status_code} "
-                f"- {response.text}"
-            )
+            print(f"⚠️ Error API ({response.status_code}): {response.text}")
 
     except KeyError as e:
         print(f"❌ Error de esquema: Falta la llave {e}.")
     except ValueError:
         print("❌ Error de casteo.")
     except Exception as e:
-        print(f"❌ Error crítico en el Bridge: {e}")
+        print(f"❌ Error crítico: {e}")
 
-# Inicialización del cliente de red MQTT
+
 bridge_client = mqtt.Client()
 bridge_client.on_connect = on_connect
 bridge_client.on_message = on_message
 
 try:
-    print("🚀 Inicializando el Bridge de Acoplamiento SMAT...")
+    print("🚀 Inicializando Bridge SMAT...")
     bridge_client.connect(MQTT_BROKER, MQTT_PORT, 60)
-
-    # Mantener el hilo escuchando activamente de forma síncrona
     bridge_client.loop_forever()
-
 except KeyboardInterrupt:
-    print("\n🛑 Bridge detenido por el administrador.") 
+    print("\n🛑 Bridge detenido.")
